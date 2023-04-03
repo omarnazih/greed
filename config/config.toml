@@ -30,7 +30,8 @@ engine = "sqlite:///database.sqlite"
 # Telegram bot parameters
 [Telegram]
 # Your bot token goes here. Get one from https://t.me/BotFather!
-token = "5634490458:AAGNtsEzT6P5SNkMEjslH7P1j8Ub71nnfp0"
+#token = "5634490458:AAGNtsEzT6P5SNkMEjslH7P1j8Ub71nnfp0"
+token = "6161821098:AAEWUigS_eLW1_6d2TDSexmhedZE2eN-axU"
 # Time in seconds before a conversation (thread) with no new messages expires
 # A lower value reduces memory usage, but can be inconvenient for the users
 conversation_timeout = 7200
@@ -110,11 +111,10 @@ display_welcome_message = true
 format = "{asctime} | {threadName} | {name} | {message}"
 # Logging level: ignore all log entries with a level lower than the specified one
 # Valid options are FATAL, ERROR, WARNING, INFO, and DEBUG
-level = "INFO"
+level = "DEBUG"
 
 # Bitcoin payment settings
 [Bitcoin]
 # Blockonomics API key
-#api_key = "sMYCZtT9CdbAGGvKFohTCVxPPhe0CAKoMfaeJzfkykg"
 api_key = "PuMnuZXbV4xYmKEmu0RZmdzj9QXzE8WXYzCOVTyLekk"
 secret = "EssenceTest"
