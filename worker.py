@@ -977,6 +977,8 @@ class Worker(threading.Thread):
             keyboard = []
             if self.admin.edit_products:
                 keyboard.append([self.loc.get("menu_products")])
+                keyboard.append([self.loc.get("menu_categories")])
+                keyboard.append([self.loc.get("menu_sub_categories")])
             if self.admin.receive_orders:
                 keyboard.append([self.loc.get("menu_orders")])
             if self.admin.create_transactions:
@@ -991,6 +993,8 @@ class Worker(threading.Thread):
             # Wait for a reply from the user
             selection = self.__wait_for_specific_message([self.loc.get("menu_products"),
                                                           self.loc.get("menu_orders"),
+                                                          self.loc.get("menu_categories"),
+                                                          self.loc.get("menu_sub_categories"),
                                                           self.loc.get("menu_user_mode"),
                                                           self.loc.get("menu_edit_credit"),
                                                           self.loc.get("menu_transactions"),
@@ -1000,6 +1004,10 @@ class Worker(threading.Thread):
             if selection == self.loc.get("menu_products"):
                 # Open the products menu
                 self.__products_menu()
+            # If the user has selected the Categories option...
+            if selection == self.loc.get("menu_categories"):
+                # Open the products menu
+                self.__categories_menu()
             # If the user has selected the Orders option...
             elif selection == self.loc.get("menu_orders"):
                 # Open the orders menu
@@ -1156,6 +1164,45 @@ class Worker(threading.Thread):
         # Notify the user
         self.bot.send_message(self.chat.id, self.loc.get("success_product_edited"))
 
+
+    def __edit_category_menu(self, category: Optional[db.Category] = None):
+        """Add a category to the database or edit an existing one."""
+        log.debug("Displaying __edit_category_menu")
+        # Create an inline keyboard with a single skip button
+        cancel = telegram.InlineKeyboardMarkup([[telegram.InlineKeyboardButton(self.loc.get("menu_skip"),
+                                                                            callback_data="cmd_cancel")]])
+        # Ask for the category name until a valid category name is specified
+        while True:
+            # Ask the question to the user
+            self.bot.send_message(self.chat.id, self.loc.get("ask_category_name"))
+            # Display the current name if you're editing an existing category
+            if category:
+                self.bot.send_message(self.chat.id, self.loc.get("edit_current_value", value=escape(category.name)),
+                                    reply_markup=cancel)
+            # Wait for an answer
+            name = self.__wait_for_regex(r"(.*)", cancellable=bool(category))
+            # Ensure a category with that name doesn't already exist
+            if (category and isinstance(name, CancelSignal)) or \
+                    self.session.query(db.Category).filter_by(name=name).one_or_none() in [None, category]:
+                # Exit the loop
+                break
+            self.bot.send_message(self.chat.id, self.loc.get("error_duplicate_cat_name"))
+        # If a new category is being added...
+        if not category:
+            # Create the db record for the category
+            # noinspection PyTypeChecker
+            category = db.Category(name=name)
+            # Add the record to the database
+            self.session.add(category)
+        # If a category is being edited...
+        else:
+            # Edit the record with the new values
+            category.name = name if not isinstance(name, CancelSignal) else category.name
+        # Commit the session changes
+        self.session.commit()
+        # Notify the user
+        self.bot.send_message(self.chat.id, self.loc.get("success_category_edited"))
+
     def __delete_product_menu(self):
         log.debug("Displaying __delete_product_menu")
         # Get the products list from the db
@@ -1183,6 +1230,74 @@ class Worker(threading.Thread):
             # Notify the user
             self.bot.send_message(self.chat.id, self.loc.get("success_product_deleted"))
 
+
+    def __delete_category_menu(self):
+        log.debug("Displaying __delete_category_menu")
+        # Get the categories list from the db
+        categories = self.session.query(db.Category).all()
+        # Create a list of category names
+        category_names = [category.name for category in categories]
+        # Insert at the start of the list the Cancel button
+        category_names.insert(0, self.loc.get("menu_cancel"))
+        # Create a keyboard using the category names
+        keyboard = [[telegram.KeyboardButton(category_name)] for category_name in category_names]
+        # Send the previously created keyboard to the user (ensuring it can be clicked only 1 time)
+        self.bot.send_message(self.chat.id, self.loc.get("conversation_admin_select_category_to_delete"),
+                            reply_markup=telegram.ReplyKeyboardMarkup(keyboard, one_time_keyboard=True))
+        # Wait for a reply from the user
+        selection = self.__wait_for_specific_message(category_names, cancellable=True)
+        if isinstance(selection, CancelSignal):
+            # Exit the menu
+            return
+        else:
+            # Find the selected category
+            category = self.session.query(db.Category).filter_by(name=selection).one()
+            # "Delete" the category by setting the deleted flag to true
+            # Delete the category
+            self.session.delete(category)
+            self.session.commit()
+            # category.deleted = True
+            # self.session.commit()
+            # Notify the user
+            self.bot.send_message(self.chat.id, self.loc.get("success_category_deleted"))
+
+    def __categories_menu(self):
+        """Display the admin menu to select a categories to edit."""
+        log.debug("Displaying __categories_menu")
+        # Get the category list from the db
+        categories = self.session.query(db.Category).all()
+        # Create a list of product names
+        category_names = [category.name for category in categories]
+        # Insert at the start of the list the add product option, the remove product option and the Cancel option
+        category_names.insert(0, self.loc.get("menu_cancel"))
+        category_names.insert(1, self.loc.get("menu_add_category"))
+        category_names.insert(2, self.loc.get("menu_delete_category"))
+        # Create a keyboard using the product names
+        keyboard = [[telegram.KeyboardButton(category_name)] for category_name in category_names]
+        # Send the previously created keyboard to the user (ensuring it can be clicked only 1 time)
+        self.bot.send_message(self.chat.id, self.loc.get("conversation_admin_select_category"),
+                              reply_markup=telegram.ReplyKeyboardMarkup(keyboard, one_time_keyboard=True))
+        # Wait for a reply from the user
+        selection = self.__wait_for_specific_message(category_names, cancellable=True)
+        # If the user has selected the Cancel option...
+        if isinstance(selection, CancelSignal):
+            # Exit the menu
+            return
+        # If the user has selected the Add Product option...
+        elif selection == self.loc.get("menu_add_category"):
+            # Open the add product menu
+            self.__edit_category_menu()
+        # If the user has selected the Remove Product option...
+        elif selection == self.loc.get("menu_delete_category"):
+            # Open the delete product menu
+            self.__delete_category_menu()
+        # If the user has selected a product
+        else:
+            # Find the selected product
+            category = self.session.query(db.Category).filter_by(name=selection).one()
+            # Open the edit menu for that specific product
+            self.__edit_category_menu(category=category)
+            
     def __orders_menu(self):
         """Display a live flow of orders."""
         log.debug("Displaying __orders_menu")

@@ -86,6 +86,12 @@ conversation_admin_select_product = "✏️ What product do you want to edit?"
 # Conversation: select a product to delete
 conversation_admin_select_product_to_delete = "❌ What product do you want to delete?"
 
+# Conversation: select a category to edit
+conversation_admin_select_category = "✏️ What categroy do you want to edit?"
+
+# Conversation: select a categroy to delete
+conversation_admin_select_category_to_delete = "❌ What category do you want to delete?"
+
 # Conversation: select a user to edit
 conversation_admin_select_user = "Select an user to edit."
 
@@ -155,6 +161,12 @@ menu_products = "📝️ Products"
 # Admin menu: orders
 menu_orders = "📦 Orders"
 
+# Admin menu: categories
+menu_categories = "📁 Categories"
+
+# Admin menu: subcategories
+menu_sub_categories = "🔹 Subcategories"
+
 # Menu: transactions
 menu_transactions = "💳 Transaction list"
 
@@ -169,6 +181,12 @@ menu_add_product = "✨ New product"
 
 # Admin menu: delete product
 menu_delete_product = "❌ Delete product"
+
+# Admin menu: add category
+menu_add_category = "✨ New Category"
+
+# Admin menu: delete category
+menu_delete_category = "❌ Delete Category"
 
 # Menu: cancel
 menu_cancel = "🔙 Cancel"
@@ -260,6 +278,9 @@ ask_product_image = "🖼 What image do you want the product to have?\n" \
                     "\n" \
                     "<i>Send the photo, or Skip this phase and don't add any image.</i>"
 
+# Add category: name?
+ask_category_name = "What should the category name be?"
+                    
 # Order product: notes?
 ask_order_notes = "Would you like to leave a note along with the order?\n" \
                   "💼 It will be visible to the store Managers.\n" \
@@ -305,6 +326,12 @@ downloading_image = "I'm downloading your photo!\n" \
 
 # Edit product: current value
 edit_current_value = "The current value is:\n" \
+                     "<pre>{value}</pre>\n" \
+                     "\n" \
+                     "<i>Press the Skip button below this message to keep the same value.</i>"
+
+# Edit category: current value
+edit_category_value = "The current value is:\n" \
                      "<pre>{value}</pre>\n" \
                      "\n" \
                      "<i>Press the Skip button below this message to keep the same value.</i>"
@@ -375,6 +402,12 @@ success_product_edited = "✅ The product has been successfully added/modified!"
 # Success: product has been added/edited to the database
 success_product_deleted = "✅ The product has been successfully deleted!"
 
+# Success: category has been added/edited to the database
+success_category_edited = "✅ The category has been successfully added/modified!"
+
+# Success: category has been added/edited to the database
+success_category_deleted = "✅ The category has been successfully deleted!"
+
 # Success: order has been created
 success_order_created = "✅ The order was sent successfully!\n" \
                         "\n" \
@@ -414,6 +447,9 @@ error_invoice_expired = "⚠️ This invoice has expired and was canceled. If yo
 
 # Error: a product with that name already exists
 error_duplicate_name = "️⚠️ A product with the same name already exists."
+
+# Error: a product with that name already exists
+error_duplicate_cat_name = "️⚠️ A category with the same name already exists."
 
 # Error: not enough credit to order
 error_not_enough_credit = "⚠️ You do not have enough credit to place the order."

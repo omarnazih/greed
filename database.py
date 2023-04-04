@@ -149,6 +149,49 @@ class Product(TableDeclarativeBase):
         self.image = r.content
 
 
+class Category(TableDeclarativeBase):
+    """A purchasable product."""
+
+    # Product id
+    id = Column(Integer, primary_key=True)
+    # Product name
+    name = Column(String)
+    # # Image data
+    # image = Column(LargeBinary)
+
+    # Extra table parameters
+    __tablename__ = "category"
+
+    # No __init__ is needed, the default one is sufficient
+
+
+    def __repr__(self):
+        return f"<Category {self.name}>"
+
+    def send_as_message(self, w: "worker.Worker", chat_id: int) -> dict:
+        """Send a message containing the category data."""
+        if self.image is None:
+            r = requests.get(f"https://api.telegram.org/bot{w.cfg['Telegram']['token']}/sendMessage",
+                             params={"chat_id": chat_id,
+                                     "text": self.text(w),
+                                     "parse_mode": "HTML"})
+        # else:
+        #     r = requests.post(f"https://api.telegram.org/bot{w.cfg['Telegram']['token']}/sendPhoto",
+        #                       files={"photo": self.image},
+        #                       params={"chat_id": chat_id,
+        #                               "caption": self.text(w),
+        #                               "parse_mode": "HTML"})
+        return r.json()
+
+    # def set_image(self, file: telegram.File):
+    #     """Download an image from Telegram and store it in the image column.
+    #     This is a slow blocking function. Try to avoid calling it directly, use a thread if possible."""
+    #     # Download the photo through a get request
+    #     r = requests.get(file.file_path)
+    #     # Store the photo in the database record
+    #     self.image = r.content
+
+
 class Transaction(TableDeclarativeBase):
     """A greed wallet transaction.
     Wallet credit ISN'T calculated from these, but they can be used to recalculate it."""
