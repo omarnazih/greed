@@ -100,14 +100,14 @@ class Product(TableDeclarativeBase):
     image = Column(LargeBinary)    
     # Product has been deleted
     deleted = Column(Boolean, nullable=False)    
-    # Category id
-    category_id = Column(Integer, ForeignKey('category.id'))
-    # Relationship with Category
-    category = relationship('Category', backref=backref("products"))    
-    # SubCategory id
-    sub_category_id = Column(Integer, ForeignKey('category.id'))
-    # Relationship with SubCategory
-    sub_category = relationship('SubCategory', backref=backref("products"))    
+    # # Category id
+    # category_id = Column(Integer, ForeignKey('category.id'))
+    # # Relationship with Category
+    # category = relationship('Category', backref=backref("products"))    
+    # # SubCategory id
+    # sub_category_id = Column(Integer, ForeignKey('category.id'))
+    # # Relationship with SubCategory
+    # sub_category = relationship('SubCategory', backref=backref("products"))    
 
     # Extra table parameters
     __tablename__ = "products"
