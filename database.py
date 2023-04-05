@@ -97,9 +97,17 @@ class Product(TableDeclarativeBase):
     # Product price, if null product is not for sale
     price = Column(Integer)
     # Image data
-    image = Column(LargeBinary)
+    image = Column(LargeBinary)    
     # Product has been deleted
-    deleted = Column(Boolean, nullable=False)
+    deleted = Column(Boolean, nullable=False)    
+    # Category id
+    category_id = Column(Integer, ForeignKey('category.id'))
+    # Relationship with Category
+    category = relationship('Category', backref=backref("products"))    
+    # SubCategory id
+    sub_category_id = Column(Integer, ForeignKey('category.id'))
+    # Relationship with SubCategory
+    sub_category = relationship('SubCategory', backref=backref("products"))    
 
     # Extra table parameters
     __tablename__ = "products"
@@ -168,29 +176,50 @@ class Category(TableDeclarativeBase):
     def __repr__(self):
         return f"<Category {self.name}>"
 
+    def text(self, w):
+        return f"<code>{self.name}</code>"
+
     def send_as_message(self, w: "worker.Worker", chat_id: int) -> dict:
         """Send a message containing the category data."""
-        if self.image is None:
-            r = requests.get(f"https://api.telegram.org/bot{w.cfg['Telegram']['token']}/sendMessage",
-                             params={"chat_id": chat_id,
-                                     "text": self.text(w),
-                                     "parse_mode": "HTML"})
-        # else:
-        #     r = requests.post(f"https://api.telegram.org/bot{w.cfg['Telegram']['token']}/sendPhoto",
-        #                       files={"photo": self.image},
-        #                       params={"chat_id": chat_id,
-        #                               "caption": self.text(w),
-        #                               "parse_mode": "HTML"})
+        r = requests.get(f"https://api.telegram.org/bot{w.cfg['Telegram']['token']}/sendMessage",
+                            params={"chat_id": chat_id,
+                                    "text": self.text(w),
+                                    "parse_mode": "HTML"})
         return r.json()
 
-    # def set_image(self, file: telegram.File):
-    #     """Download an image from Telegram and store it in the image column.
-    #     This is a slow blocking function. Try to avoid calling it directly, use a thread if possible."""
-    #     # Download the photo through a get request
-    #     r = requests.get(file.file_path)
-    #     # Store the photo in the database record
-    #     self.image = r.content
+class SubCategory(TableDeclarativeBase):
+    """A purchasable product."""
 
+    # Product id
+    id = Column(Integer, primary_key=True)
+    
+    # Product name
+    name = Column(String)
+    
+    # Category id
+    category_id = Column(Integer, ForeignKey('category.id'))
+
+    # Relationship with Category
+    category = relationship('Category', backref=backref("subcategory"))
+
+    # Extra table parameters
+    __tablename__ = "subcategory"
+
+    # No __init__ is needed, the default one is sufficient
+
+    def __repr__(self):
+        return f"<SubCategory {self.name}>"
+
+    def text(self, w):
+        return f"<code>{self.name}</code>"
+    
+    def send_as_message(self, w: "worker.Worker", chat_id: int) -> dict:
+        """Send a message containing the SubCategory data."""
+        r = requests.get(f"https://api.telegram.org/bot{w.cfg['Telegram']['token']}/sendMessage",
+                            params={"chat_id": chat_id,
+                                    "text": self.text(w),
+                                    "parse_mode": "HTML"})
+        return r.json()
 
 class Transaction(TableDeclarativeBase):
     """A greed wallet transaction.

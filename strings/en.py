@@ -92,6 +92,12 @@ conversation_admin_select_category = "✏️ What categroy do you want to edit?"
 # Conversation: select a categroy to delete
 conversation_admin_select_category_to_delete = "❌ What category do you want to delete?"
 
+# Conversation: select a category to edit
+conversation_admin_select_sub_category = "✏️ What subcategroy do you want to edit?"
+
+# Conversation: select a categroy to delete
+conversation_admin_select_sub_category_to_delete = "❌ What subcategory do you want to delete?"
+
 # Conversation: select a user to edit
 conversation_admin_select_user = "Select an user to edit."
 
@@ -188,6 +194,12 @@ menu_add_category = "✨ New Category"
 # Admin menu: delete category
 menu_delete_category = "❌ Delete Category"
 
+# Admin menu: add subcategory
+menu_add_sub_category = "✨ New Subcategory"
+
+# Admin menu: delete subcategory
+menu_delete_sub_category = "❌ Delete Subcategory"
+
 # Menu: cancel
 menu_cancel = "🔙 Cancel"
 
@@ -196,6 +208,15 @@ menu_skip = "⏭ Skip"
 
 # Menu: done
 menu_done = "✅️ Done"
+
+# Menu: approve
+menu_approve = "✅️ Approve"
+
+# Menu: Decline
+menu_decline = "❌ Decline"
+
+# Menu: Select
+menu_select = "✅ Select"
 
 # Menu: pay invoice
 menu_pay = "💳 Pay"
@@ -280,7 +301,14 @@ ask_product_image = "🖼 What image do you want the product to have?\n" \
 
 # Add category: name?
 ask_category_name = "What should the category name be?"
-                    
+
+# Add subcategory: name?
+ask_sub_category_name = "What should the subcategory name be?"
+            
+# Add subcategory parent: name?
+ask_parent_category_name = "What should parent category be? \n "\
+                            "Choose from categories below"
+
 # Order product: notes?
 ask_order_notes = "Would you like to leave a note along with the order?\n" \
                   "💼 It will be visible to the store Managers.\n" \
@@ -405,8 +433,13 @@ success_product_deleted = "✅ The product has been successfully deleted!"
 # Success: category has been added/edited to the database
 success_category_edited = "✅ The category has been successfully added/modified!"
 
+# Success: subcategory has been added/edited to the database
+success_sub_category_edited = "✅ The subcategory has been successfully added/modified!"
+
 # Success: category has been added/edited to the database
 success_category_deleted = "✅ The category has been successfully deleted!"
+# Success: subcategory has been added/edited to the database
+success_sub_category_deleted = "✅ The subcategory has been successfully deleted!"
 
 # Success: order has been created
 success_order_created = "✅ The order was sent successfully!\n" \
@@ -448,8 +481,11 @@ error_invoice_expired = "⚠️ This invoice has expired and was canceled. If yo
 # Error: a product with that name already exists
 error_duplicate_name = "️⚠️ A product with the same name already exists."
 
-# Error: a product with that name already exists
+# Error: a category with that name already exists
 error_duplicate_cat_name = "️⚠️ A category with the same name already exists."
+
+# Error: a subcategory with that name already exists
+error_duplicate_sub_cat_name = "️⚠️ A subcategory with the same name already exists."
 
 # Error: not enough credit to order
 error_not_enough_credit = "⚠️ You do not have enough credit to place the order."
