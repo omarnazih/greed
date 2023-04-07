@@ -188,6 +188,9 @@ menu_add_product = "✨ New product"
 # Admin menu: delete product
 menu_delete_product = "❌ Delete product"
 
+# Admin menu: add variance
+menu_add_variance = "➕ Add variance"
+
 # Admin menu: add category
 menu_add_category = "✨ New Category"
 
@@ -209,8 +212,8 @@ menu_skip = "⏭ Skip"
 # Menu: done
 menu_done = "✅️ Done"
 
-# Menu: approve
-menu_approve = "✅️ Approve"
+# Menu: edit
+menu_edit = "📝 Edit"
 
 # Menu: Decline
 menu_decline = "❌ Decline"
@@ -289,6 +292,12 @@ ask_product_name = "What should the product name be?"
 
 # Add product: description?
 ask_product_description = "What should the product description be?"
+
+# Add product: category?
+ask_product_category = "What should the product category be?"
+
+# Add product: subcategory?
+ask_product_sub_category = "What should the product subcategory be?"
 
 # Add product: price?
 ask_product_price = "What should the product price be?\n" \

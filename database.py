@@ -3,7 +3,7 @@ import typing
 import requests
 import telegram
 from sqlalchemy import Column, ForeignKey, UniqueConstraint
-from sqlalchemy import Integer, BigInteger, String, Text, LargeBinary, DateTime, Boolean, Float
+from sqlalchemy import Integer, Numeric, BigInteger, String, Text, LargeBinary, DateTime, Boolean, Float
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, backref
 import utils
@@ -87,7 +87,9 @@ class User(TableDeclarativeBase):
 
 class Product(TableDeclarativeBase):
     """A purchasable product."""
-
+    # Tablename
+    __tablename__ = "products"
+    
     # Product id
     id = Column(Integer, primary_key=True)
     # Product name
@@ -100,17 +102,16 @@ class Product(TableDeclarativeBase):
     image = Column(LargeBinary)    
     # Product has been deleted
     deleted = Column(Boolean, nullable=False)    
-    # # Category id
-    # category_id = Column(Integer, ForeignKey('category.id'))
-    # # Relationship with Category
-    # category = relationship('Category', backref=backref("products"))    
-    # # SubCategory id
-    # sub_category_id = Column(Integer, ForeignKey('category.id'))
-    # # Relationship with SubCategory
-    # sub_category = relationship('SubCategory', backref=backref("products"))    
-
-    # Extra table parameters
-    __tablename__ = "products"
+    # Category id
+    category_id = Column(Integer, ForeignKey('category.id'))
+    # Relationship with Category
+    category = relationship('Category', backref=backref("products"))    
+    # SubCategory id
+    sub_category_id = Column(Integer, ForeignKey('subcategory.id'))
+    # Relationship with SubCategory
+    sub_category = relationship('SubCategory', backref=backref("products"))
+    # Relationship with variations
+    variations = relationship('Variation', backref=backref("products"))
 
     # No __init__ is needed, the default one is sufficient
 
@@ -121,6 +122,7 @@ class Product(TableDeclarativeBase):
         elif style == "full":
             if cart_qty is not None:
                 cart = w.loc.get("in_cart_format_string", quantity=cart_qty)
+
             else:
                 cart = ''
             return w.loc.get("product_format_string", name=utils.telegram_html_escape(self.name),
@@ -164,8 +166,6 @@ class Category(TableDeclarativeBase):
     id = Column(Integer, primary_key=True)
     # Product name
     name = Column(String)
-    # # Image data
-    # image = Column(LargeBinary)
 
     # Extra table parameters
     __tablename__ = "category"
@@ -186,6 +186,28 @@ class Category(TableDeclarativeBase):
                                     "text": self.text(w),
                                     "parse_mode": "HTML"})
         return r.json()
+
+class Variation(TableDeclarativeBase):
+    __tablename__ = 'variation'
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+    price = Column(Numeric)
+    product_id = Column(Integer, ForeignKey('products.id'))
+    product = relationship('Product', backref=backref("variation"))
+
+    def __repr__(self):
+        return f"<Variation {self.name}>"
+
+    def text(self, w):
+        return f"<code>{self.name}</code>"
+
+    def send_as_message(self, w: "worker.Worker", chat_id: int) -> dict:
+        """Send a message containing the variation data."""
+        r = requests.get(f"https://api.telegram.org/bot{w.cfg['Telegram']['token']}/sendMessage",
+                            params={"chat_id": chat_id,
+                                    "text": self.text(w),
+                                    "parse_mode": "HTML"})
+        return r.json()    
 
 class SubCategory(TableDeclarativeBase):
     """A purchasable product."""
