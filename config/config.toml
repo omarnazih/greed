@@ -27,6 +27,8 @@ fallback_language = "en"
 engine = "sqlite:///database.sqlite"
 
 
+
+
 # Telegram bot parameters
 [Telegram]
 # Your bot token goes here. Get one from https://t.me/BotFather!

@@ -83,8 +83,14 @@ conversation_payment_method = "How do you want to add funds to your wallet?"
 # Conversation: select a product to edit
 conversation_admin_select_product = "✏️ What product do you want to edit?"
 
+# Conversation: select a product variance to edit
+conversation_admin_select_variance = "✏️ What variation do you want to edit?"
+
 # Conversation: select a product to delete
 conversation_admin_select_product_to_delete = "❌ What product do you want to delete?"
+
+# Conversation: select a variation to delete
+conversation_admin_select_variation_to_delete = "❌ What variation do you want to delete?"
 
 # Conversation: select a category to edit
 conversation_admin_select_category = "✏️ What categroy do you want to edit?"
@@ -191,6 +197,9 @@ menu_delete_product = "❌ Delete product"
 # Admin menu: add variance
 menu_add_variance = "➕ Add variance"
 
+# Admin menu: delete variance
+menu_delete_variance = "❌ Delete variance"
+
 # Admin menu: add category
 menu_add_category = "✨ New Category"
 
@@ -289,6 +298,12 @@ text_refunded = "refunded"
 
 # Add product: name?
 ask_product_name = "What should the product name be?"
+
+# Add variation: name?
+ask_variation_name = "What should the variation name be?"
+
+# Add variation: price?
+ask_variation_price = "What should the variation price be?"
 
 # Add product: description?
 ask_product_description = "What should the product description be?"
@@ -439,6 +454,12 @@ success_product_edited = "✅ The product has been successfully added/modified!"
 # Success: product has been added/edited to the database
 success_product_deleted = "✅ The product has been successfully deleted!"
 
+# Success: variation has been added/edited to the database
+success_variation_edited = "✅ The variation has been successfully added/modified!"
+
+# Success: variation has been added/edited to the database
+success_variation_deleted = "✅ The variation has been successfully deleted!"
+
 # Success: category has been added/edited to the database
 success_category_edited = "✅ The category has been successfully added/modified!"
 
@@ -489,6 +510,9 @@ error_invoice_expired = "⚠️ This invoice has expired and was canceled. If yo
 
 # Error: a product with that name already exists
 error_duplicate_name = "️⚠️ A product with the same name already exists."
+
+# Error: a product with that name already exists
+error_duplicate_variation_name = "️⚠️ A variation with the same name already exists."
 
 # Error: a category with that name already exists
 error_duplicate_cat_name = "️⚠️ A category with the same name already exists."

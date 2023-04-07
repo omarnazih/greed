@@ -80,6 +80,7 @@ def main():
     database.TableDeclarativeBase.metadata.bind = engine
     log.debug("Creating all missing tables...")
     # !TODO If you want to recreate database on development DON'T USE ON PRODUCTION
+    # Use Alembic instead !!
     # database.TableDeclarativeBase.metadata.drop_all()
     database.TableDeclarativeBase.metadata.create_all()
     log.debug("Preparing the tables through deferred reflection...")

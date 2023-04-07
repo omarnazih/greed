@@ -1072,13 +1072,50 @@ class Worker(threading.Thread):
             self.__delete_product_menu()
         elif selection == self.loc.get("menu_add_variance"):
             # Open the delete product menu
-            self.__edit_product_variance()
+            self.__variation_menu()
         # If the user has selected a product
         else:
             # Find the selected product
             product = self.session.query(db.Product).filter_by(name=selection, deleted=False).one()
             # Open the edit menu for that specific product
             self.__edit_product_menu(product=product)
+
+    def __variation_menu(self):
+        """Display the admin menu to select a product to edit."""
+        log.debug("Displaying __variation_menu")
+        # Get the products list from the db
+        variations = self.session.query(db.Variation).all()
+        # Create a list of product names
+        variation_names = [variation.name for variation in variations]
+        # Insert at the start of the list the add product option, the remove product option and the Cancel option
+        variation_names.insert(0, self.loc.get("menu_cancel"))
+        variation_names.insert(1, self.loc.get("menu_add_variance"))
+        variation_names.insert(2, self.loc.get("menu_delete_variance"))
+
+        # Create a keyboard using the product names
+        keyboard = [[telegram.KeyboardButton(variation_name)] for variation_name in variation_names]
+        # Send the previously created keyboard to the user (ensuring it can be clicked only 1 time)
+        self.bot.send_message(self.chat.id, self.loc.get("conversation_admin_select_variance"),
+                              reply_markup=telegram.ReplyKeyboardMarkup(keyboard, one_time_keyboard=True))
+        # Wait for a reply from the user
+        selection = self.__wait_for_specific_message(variation_names, cancellable=True)
+        # If the user has selected the Cancel option...
+        if isinstance(selection, CancelSignal):
+            # Exit the menu
+            return
+        # If the user has selected the Add Product option...
+        elif selection == self.loc.get("menu_add_variance"):
+            # Open the add product menu
+            self.__edit_variation()
+        # If the user has selected the Remove Product option...
+        elif selection == self.loc.get("menu_delete_variance"):
+            # Open the delete product menu
+            self.__delete_variation_menu()
+        else:
+            # Find the selected product
+            variation = self.session.query(db.Variation).filter_by(name=selection).one()
+            # Open the edit menu for that specific product
+            self.__edit_variation(variation=variation)
 
     def __edit_product_menu(self, product: Optional[db.Product] = None):
         """Add a product to the database or edit an existing one."""
@@ -1248,44 +1285,74 @@ class Worker(threading.Thread):
         self.bot.send_message(self.chat.id, self.loc.get("success_product_edited"))
 
 
-    def __edit_product_variance(self, variance: Optional[db.Variation] = None):
-        """Add a category to the database or edit an existing one."""
-        log.debug("Displaying __edit_product_variance")
-        # Create an inline keyboard with a single skip button
-        cancel = telegram.InlineKeyboardMarkup([[telegram.InlineKeyboardButton(self.loc.get("menu_skip"),
-                                                                            callback_data="cmd_cancel")]])
-        # Ask for the category name until a valid category name is specified
-        while True:
-            # Ask the question to the user
-            self.bot.send_message(self.chat.id, self.loc.get("ask_category_name"))
-            # Display the current name if you're editing an existing category
-            if category:
-                self.bot.send_message(self.chat.id, self.loc.get("edit_current_value", value=escape(category.name)),
-                                    reply_markup=cancel)
-            # Wait for an answer
-            name = self.__wait_for_regex(r"(.*)", cancellable=bool(category))
-            # Ensure a category with that name doesn't already exist
-            if (category and isinstance(name, CancelSignal)) or \
-                    self.session.query(db.Category).filter_by(name=name).one_or_none() in [None, category]:
-                # Exit the loop
-                break
-            self.bot.send_message(self.chat.id, self.loc.get("error_duplicate_cat_name"))
-        # If a new category is being added...
-        if not category:
-            # Create the db record for the category
-            # noinspection PyTypeChecker
-            category = db.Category(name=name)
-            # Add the record to the database
-            self.session.add(category)
-        # If a category is being edited...
-        else:
-            # Edit the record with the new values
-            category.name = name if not isinstance(name, CancelSignal) else category.name
-        # Commit the session changes
-        self.session.commit()
-        # Notify the user
-        self.bot.send_message(self.chat.id, self.loc.get("success_category_edited"))
+    def __edit_variation(self, variation: Optional[db.Variation] = None):
+            """Add a variation to the database or edit an existing one."""
+            log.debug("Displaying __edit_product_variation")
+            # Create an inline keyboard with a single skip button
+            cancel = telegram.InlineKeyboardMarkup([[telegram.InlineKeyboardButton(self.loc.get("menu_skip"),
+                                                                                callback_data="cmd_cancel")]])
+            # Ask for the variation name
+            while True:
+                self.bot.send_message(self.chat.id, self.loc.get("ask_variation_name"))
+                if variation:
+                    self.bot.send_message(self.chat.id, self.loc.get("edit_current_value", value=escape(variation.name)),
+                                        reply_markup=cancel)
+                name = self.__wait_for_regex(r"(.*)", cancellable=bool(variation))
+                if (variation and isinstance(name, CancelSignal)) or \
+                        self.session.query(db.Variation).filter_by(name=name).one_or_none() in [None, variation]:
+                    break
+                self.bot.send_message(self.chat.id, self.loc.get("error_duplicate_variation_name"))
 
+            # Ask for the variation price
+            while True:
+                self.bot.send_message(self.chat.id, self.loc.get("ask_variation_price"))
+                if variation:
+                    self.bot.send_message(self.chat.id, self.loc.get("edit_current_value", value=escape(variation.price)),
+                                        reply_markup=cancel)
+                price = self.__wait_for_regex(r"([-+]?\d*\.?\d+)", cancellable=bool(variation))
+                if (variation and isinstance(price, CancelSignal)) or \
+                        self.session.query(db.Variation).filter_by(price=price).one_or_none() in [None, variation]:
+                    break
+                self.bot.send_message(self.chat.id, self.loc.get("error_duplicate_variation_price"))
+
+            # Create a new variation record if needed
+            if not variation:
+                variation = db.Variation(name=name, price=price)
+                self.session.add(variation)
+            # Edit the existing variation record
+            else:
+                variation.name = name if not isinstance(name, CancelSignal) else variation.name
+                variation.price = price if not isinstance(price, CancelSignal) else variation.price
+            self.session.commit()
+            self.bot.send_message(self.chat.id, self.loc.get("success_variation_edited"))
+
+    def __delete_variation_menu(self):
+        log.debug("Displaying __delete_product_variation_menu")
+        # Get the products list from the db
+        variations = self.session.query(db.Variation).all()
+        # Create a list of product names
+        variation_names = [variation.name for variation in variations]
+        # Insert at the start of the list the Cancel button
+        variation_names.insert(0, self.loc.get("menu_cancel"))
+        # Create a keyboard using the product names
+        keyboard = [[telegram.KeyboardButton(variation_name)] for variation_name in variation_names]
+        # Send the previously created keyboard to the user (ensuring it can be clicked only 1 time)
+        self.bot.send_message(self.chat.id, self.loc.get("conversation_admin_select_variation_to_delete"),
+                              reply_markup=telegram.ReplyKeyboardMarkup(keyboard, one_time_keyboard=True))
+        # Wait for a reply from the user
+        selection = self.__wait_for_specific_message(variation_names, cancellable=True)
+        if isinstance(selection, CancelSignal):
+            # Exit the menu
+            return
+        else:
+            # Find the selected product
+            variation = self.session.query(db.Variation).filter_by(name=selection).one()
+            # Delete variation
+            self.session.delete(variation)
+            self.session.commit()
+            # Notify the user
+            self.bot.send_message(self.chat.id, self.loc.get("success_variation_deleted"))
+    
     def __edit_category_menu(self, category: Optional[db.Category] = None):
         """Add a category to the database or edit an existing one."""
         log.debug("Displaying __edit_category_menu")

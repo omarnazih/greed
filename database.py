@@ -3,7 +3,7 @@ import typing
 import requests
 import telegram
 from sqlalchemy import Column, ForeignKey, UniqueConstraint
-from sqlalchemy import Integer, Numeric, BigInteger, String, Text, LargeBinary, DateTime, Boolean, Float
+from sqlalchemy import Integer, BigInteger, String, Text, LargeBinary, DateTime, Boolean, Float
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, backref
 import utils
@@ -104,14 +104,14 @@ class Product(TableDeclarativeBase):
     deleted = Column(Boolean, nullable=False)    
     # Category id
     category_id = Column(Integer, ForeignKey('category.id'))
+    # SubCategory id
+    sub_category_id = Column(Integer, ForeignKey('subcategory.id'))    
     # Relationship with Category
     category = relationship('Category', backref=backref("products"))    
-    # SubCategory id
-    sub_category_id = Column(Integer, ForeignKey('subcategory.id'))
     # Relationship with SubCategory
     sub_category = relationship('SubCategory', backref=backref("products"))
-    # Relationship with variations
-    variations = relationship('Variation', backref=backref("products"))
+    # Relationship with variation
+    variation = relationship('ProductVariation', backref=backref("products"))
 
     # No __init__ is needed, the default one is sufficient
 
@@ -186,14 +186,13 @@ class Category(TableDeclarativeBase):
                                     "text": self.text(w),
                                     "parse_mode": "HTML"})
         return r.json()
-
+  
 class Variation(TableDeclarativeBase):
     __tablename__ = 'variation'
     id = Column(Integer, primary_key=True)
     name = Column(String)
-    price = Column(Numeric)
-    product_id = Column(Integer, ForeignKey('products.id'))
-    product = relationship('Product', backref=backref("variation"))
+    price = Column(String)
+    product = relationship('ProductVariation', backref=backref("variation"))
 
     def __repr__(self):
         return f"<Variation {self.name}>"
@@ -208,6 +207,20 @@ class Variation(TableDeclarativeBase):
                                     "text": self.text(w),
                                     "parse_mode": "HTML"})
         return r.json()    
+
+class ProductVariation(TableDeclarativeBase):
+    __tablename__ = 'product_variations'
+
+    product_id = Column(Integer, ForeignKey('products.id'), primary_key=True)
+    variation_id = Column(Integer, ForeignKey('variation.id'), primary_key=True)
+    price = Column(Float)
+
+    # Define the relationship with Product and Variation tables
+    product = relationship("Product", backref=backref("variation", cascade="all, delete-orphan"))
+    variation = relationship("Variation", backref=backref("products", cascade="all, delete-orphan"))
+    
+    def __repr__(self):
+        return f"<ProductVariation {self.name}>"    
 
 class SubCategory(TableDeclarativeBase):
     """A purchasable product."""
