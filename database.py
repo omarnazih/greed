@@ -2,7 +2,7 @@ import logging
 import typing
 import requests
 import telegram
-from sqlalchemy import Column, ForeignKey, UniqueConstraint
+from sqlalchemy import Column, ForeignKey, Table, UniqueConstraint
 from sqlalchemy import Integer, BigInteger, String, Text, LargeBinary, DateTime, Boolean, Float
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, backref
@@ -111,7 +111,7 @@ class Product(TableDeclarativeBase):
     # Relationship with SubCategory
     sub_category = relationship('SubCategory', backref=backref("products"))
     # Relationship with variation
-    variation = relationship('ProductVariation', backref=backref("products"))
+    variations = relationship("Variation", secondary="product_variation", viewonly=True)
 
     # No __init__ is needed, the default one is sufficient
 
@@ -119,6 +119,8 @@ class Product(TableDeclarativeBase):
         """Return the product details formatted with Telegram HTML. The image is omitted."""
         if style == "short":
             return f"{cart_qty}x {utils.telegram_html_escape(self.name)} - {str(w.Price(self.price) * cart_qty)}"
+        if style == "product_variation":
+            return f"{utils.telegram_html_escape(self.name)}"
         elif style == "full":
             if cart_qty is not None:
                 cart = w.loc.get("in_cart_format_string", quantity=cart_qty)
@@ -135,9 +137,9 @@ class Product(TableDeclarativeBase):
     def __repr__(self):
         return f"<Product {self.name}>"
 
-    def send_as_message(self, w: "worker.Worker", chat_id: int) -> dict:
+    def send_as_message(self, w: "worker.Worker", chat_id: int, with_image: bool= True) -> dict:
         """Send a message containing the product data."""
-        if self.image is None:
+        if self.image is None or with_image is False:
             r = requests.get(f"https://api.telegram.org/bot{w.cfg['Telegram']['token']}/sendMessage",
                              params={"chat_id": chat_id,
                                      "text": self.text(w),
@@ -167,6 +169,7 @@ class Category(TableDeclarativeBase):
     # Product name
     name = Column(String)
 
+    # subcategory = relationship("SubCategory", secondary="category", viewonly=True)
     # Extra table parameters
     __tablename__ = "category"
 
@@ -176,51 +179,18 @@ class Category(TableDeclarativeBase):
     def __repr__(self):
         return f"<Category {self.name}>"
 
-    def text(self, w):
-        return f"<code>{self.name}</code>"
+    def text(self, text=None, w=None):
+        if text:
+            return f"<b>{self.name}({text})</b>"
+        return f"<b>{self.name}</b>"
 
-    def send_as_message(self, w: "worker.Worker", chat_id: int) -> dict:
+    def send_as_message(self, w: "worker.Worker", chat_id: int, text: str = None) -> dict:
         """Send a message containing the category data."""
         r = requests.get(f"https://api.telegram.org/bot{w.cfg['Telegram']['token']}/sendMessage",
                             params={"chat_id": chat_id,
-                                    "text": self.text(w),
+                                    "text": self.text(text=text),
                                     "parse_mode": "HTML"})
         return r.json()
-  
-class Variation(TableDeclarativeBase):
-    __tablename__ = 'variation'
-    id = Column(Integer, primary_key=True)
-    name = Column(String)
-    price = Column(String)
-    product = relationship('ProductVariation', backref=backref("variation"))
-
-    def __repr__(self):
-        return f"<Variation {self.name}>"
-
-    def text(self, w):
-        return f"<code>{self.name}</code>"
-
-    def send_as_message(self, w: "worker.Worker", chat_id: int) -> dict:
-        """Send a message containing the variation data."""
-        r = requests.get(f"https://api.telegram.org/bot{w.cfg['Telegram']['token']}/sendMessage",
-                            params={"chat_id": chat_id,
-                                    "text": self.text(w),
-                                    "parse_mode": "HTML"})
-        return r.json()    
-
-class ProductVariation(TableDeclarativeBase):
-    __tablename__ = 'product_variations'
-
-    product_id = Column(Integer, ForeignKey('products.id'), primary_key=True)
-    variation_id = Column(Integer, ForeignKey('variation.id'), primary_key=True)
-    price = Column(Float)
-
-    # Define the relationship with Product and Variation tables
-    product = relationship("Product", backref=backref("variation", cascade="all, delete-orphan"))
-    variation = relationship("Variation", backref=backref("products", cascade="all, delete-orphan"))
-    
-    def __repr__(self):
-        return f"<ProductVariation {self.name}>"    
 
 class SubCategory(TableDeclarativeBase):
     """A purchasable product."""
@@ -245,16 +215,72 @@ class SubCategory(TableDeclarativeBase):
     def __repr__(self):
         return f"<SubCategory {self.name}>"
 
+    def text(self, text=None, w=None):
+        if text:
+            return f"<b>{self.name}({text})</b>"
+        return f"<b>{self.name}</b>"
+    
+    def send_as_message(self, w: "worker.Worker", chat_id: int, text: str = None) -> dict:
+        """Send a message containing the category data."""
+        r = requests.get(f"https://api.telegram.org/bot{w.cfg['Telegram']['token']}/sendMessage",
+                            params={"chat_id": chat_id,
+                                    "text": self.text(text=text),
+                                    "parse_mode": "HTML"})
+        return r.json()
+  
+class Variation(TableDeclarativeBase):
+    __tablename__ = 'variation'
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+    quantity = Column(Integer)
+    price_diff = Column(Integer)
+    products = relationship("Product", secondary="product_variation", viewonly=True)
+
+    def __repr__(self):
+        return f"<Variation {self.name}>"
+
     def text(self, w):
         return f"<code>{self.name}</code>"
-    
+
     def send_as_message(self, w: "worker.Worker", chat_id: int) -> dict:
-        """Send a message containing the SubCategory data."""
+        """Send a message containing the variation data."""
+        r = requests.get(f"https://api.telegram.org/bot{w.cfg['Telegram']['token']}/sendMessage",
+                            params={"chat_id": chat_id,
+                                    "text": self.text(w),
+                                    "parse_mode": "HTML"})
+        return r.json()    
+
+
+class ProductVariation(TableDeclarativeBase):
+    __tablename__ = 'product_variation'
+    id = Column(Integer, primary_key=True)
+    product_id = Column(Integer, ForeignKey('products.id'), primary_key=True)
+    variation_id = Column(Integer, ForeignKey('variation.id'), primary_key=True)
+    product = relationship('Product', backref=backref("product_variation", cascade="all, delete-orphan"))    
+    variation = relationship('Variation', backref=backref("product_variation",cascade="all, delete-orphan"))        
+    
+    __table_args__ = (UniqueConstraint('product_id', 'variation_id'),)
+    def __repr__(self):
+        return f"<ProductVariation {self.id}>" 
+    
+    def text(self, w):
+        # Had to Multiply by 100 to match the bug in product price!
+        price = int(self.product.price) + int(self.variation.price_diff*100)
+        cart = ''
+        return w.loc.get("product_format_string", name=utils.telegram_html_escape(self.product.name),
+                            description=utils.telegram_html_escape(self.variation.name),
+                            price=str(w.Price(price)),
+                            cart=cart
+                            )
+
+    def send_as_message(self, w: "worker.Worker", chat_id: int) -> dict:
+        """Send a message containing the variation data."""
         r = requests.get(f"https://api.telegram.org/bot{w.cfg['Telegram']['token']}/sendMessage",
                             params={"chat_id": chat_id,
                                     "text": self.text(w),
                                     "parse_mode": "HTML"})
         return r.json()
+    
 
 class Transaction(TableDeclarativeBase):
     """A greed wallet transaction.

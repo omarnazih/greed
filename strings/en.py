@@ -21,6 +21,16 @@ product_format_string = "<b>{name}</b>\n" \
                         "{price}\n" \
                         "<b>{cart}</b>"
 
+# Order Menue
+order_choose_category = "Select a <b>category📂</b>\n\n"\
+                        "Press the select key to choose one. \n"\
+                        "The number inside () indicates subcategories count."
+
+# Order Menue
+order_choose_subcategory = "Select a <b>subcategory📂</b> \n\n"\
+                            "Press the select key to choose one. \n"\
+                            "The number inside () indicates products count under that subcategory."
+
 # Order number, displayed in the order info
 order_number = "Order #{id}"
 
@@ -152,6 +162,9 @@ conversation_expired = "🕐  I haven't received any messages in a while, so I c
 # User menu: order
 menu_order = "🛒 Order products"
 
+# User menu: categoris
+menu_products_categories = "📂 Products By Category/Subcategory"
+
 # User menu: order status
 menu_order_status = "🛍 My orders"
 
@@ -195,7 +208,13 @@ menu_add_product = "✨ New product"
 menu_delete_product = "❌ Delete product"
 
 # Admin menu: add variance
-menu_add_variance = "➕ Add variance"
+menu_add_variance = "✨ New variance"
+
+# Admin menu: add variance
+menu_product_variance = "🔄 Product variance"
+
+# Admin menu: add variance
+menu_variance = "🧩 Variance"
 
 # Admin menu: delete variance
 menu_delete_variance = "❌ Delete variance"
@@ -304,6 +323,9 @@ ask_variation_name = "What should the variation name be?"
 
 # Add variation: price?
 ask_variation_price = "What should the variation price be?"
+
+# Add variation: price?
+ask_variation_quantity = "What should the quantity be?"
 
 # Add product: description?
 ask_product_description = "What should the product description be?"
