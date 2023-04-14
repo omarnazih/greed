@@ -21,6 +21,11 @@ product_format_string = "<b>{name}</b>\n" \
                         "{price}\n" \
                         "<b>{cart}</b>"
 
+# Variation information
+variation_format_string = "<b>{name}</b> - {description}\n" \
+                          "{price}"\
+                          "<b>{cart}</b>"
+
 # Order Menue
 order_choose_category = "Select a <b>category📂</b>\n\n"\
                         "Press the select key to choose one. \n"\

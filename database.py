@@ -124,7 +124,6 @@ class Product(TableDeclarativeBase):
         elif style == "full":
             if cart_qty is not None:
                 cart = w.loc.get("in_cart_format_string", quantity=cart_qty)
-
             else:
                 cart = ''
             return w.loc.get("product_format_string", name=utils.telegram_html_escape(self.name),
@@ -267,7 +266,7 @@ class ProductVariation(TableDeclarativeBase):
         # Had to Multiply by 100 to match the bug in product price!
         price = int(self.product.price) + int(self.variation.price_diff*100)
         cart = ''
-        return w.loc.get("product_format_string", name=utils.telegram_html_escape(self.product.name),
+        return w.loc.get("variation_format_string", name=utils.telegram_html_escape(self.product.name),
                             description=utils.telegram_html_escape(self.variation.name),
                             price=str(w.Price(price)),
                             cart=cart
