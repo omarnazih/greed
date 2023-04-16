@@ -25,6 +25,7 @@ fallback_language = "en"
 # The database engine you want to use.
 # Refer to http://docs.sqlalchemy.org/en/latest/core/engines.html for the possible settings.
 engine = "sqlite:///database.sqlite"
+#engine = "postgresql+psycopg2://postgres:peq6ozsMwvF9F9X@essencemarket-db.flycast:5432"
 
 
 
@@ -32,6 +33,7 @@ engine = "sqlite:///database.sqlite"
 [Telegram]
 # Your bot token goes here. Get one from https://t.me/BotFather!
 token = "5634490458:AAFlRX3xbZXdv-IC3aTyyGFVwcXN37HTycQ"
+#token = "6002512838:AAGcK_c-MQL-xxaTV9jaIPuVtDnDf8Dkzt0"
 
 # Time in seconds before a conversation (thread) with no new messages expires
 # A lower value reduces memory usage, but can be inconvenient for the users
@@ -51,7 +53,8 @@ con_pool_size = 10
 # ISO currency code
 currency = "EUR"
 # Currency exp parameter. You can find that on https://core.telegram.org/bots/payments/currencies.json.
-# It has a value of 2 in most currencies (EUR, USD, GBP...)
+# It has a value of 2 in most currencies (EUR, USD, GBP...) 
+# !It results in a bug if using 2 which is * 100 for all numbers !
 currency_exp = 2
 # Currency symbol which is show to the client users when displaying prices and transaction values
 # If not defined here, default language specific currency symbol from strings would be used

@@ -97,7 +97,7 @@ class Product(TableDeclarativeBase):
     # Product description
     description = Column(Text)
     # Product price, if null product is not for sale
-    price = Column(Integer)
+    price = Column(Float)
     # Image data
     image = Column(LargeBinary)    
     # Product has been deleted
@@ -124,7 +124,6 @@ class Product(TableDeclarativeBase):
         elif style == "full":
             if cart_qty is not None:
                 cart = w.loc.get("in_cart_format_string", quantity=cart_qty)
-
             else:
                 cart = ''
             return w.loc.get("product_format_string", name=utils.telegram_html_escape(self.name),
@@ -233,7 +232,7 @@ class Variation(TableDeclarativeBase):
     id = Column(Integer, primary_key=True)
     name = Column(String)
     quantity = Column(Integer)
-    price_diff = Column(Integer)
+    price_diff = Column(Float)
     products = relationship("Product", secondary="product_variation", viewonly=True)
 
     def __repr__(self):
@@ -265,9 +264,9 @@ class ProductVariation(TableDeclarativeBase):
     
     def text(self, w):
         # Had to Multiply by 100 to match the bug in product price!
-        price = int(self.product.price) + int(self.variation.price_diff*100)
+        price = self.product.price + self.variation.price_diff
         cart = ''
-        return w.loc.get("product_format_string", name=utils.telegram_html_escape(self.product.name),
+        return w.loc.get("variation_format_string", name=utils.telegram_html_escape(self.product.name),
                             description=utils.telegram_html_escape(self.variation.name),
                             price=str(w.Price(price)),
                             cart=cart

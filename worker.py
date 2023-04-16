@@ -78,6 +78,7 @@ class Worker(threading.Thread):
 
             def __init__(self, value: Union[int, float, str, "Price"]):
                 if isinstance(value, int):
+                    print(value)
                     # Keep the value as it is
                     self.value = int(value)
                 elif isinstance(value, float):
@@ -550,16 +551,16 @@ class Worker(threading.Thread):
         self.bot.send_message(self.chat.id, self.loc.get("order_choose_subcategory"))
         # Initialize the categories list
         for subcategory in subcategories:
-            items_count= self.session.query(db.Product).filter_by(sub_category=subcategory).count()
+            items_count= self.session.query(db.Product).filter_by(sub_category=subcategory, deleted=False).count()
             if not items_count:
                 pass 
             # Send the message without the keyboard to get the message id
-            message = subcategory.send_as_message(w=self, chat_id=self.chat.id, text=items_count)
+            message = subcategory.send_as_message(w=self, chat_id=self.chat.id)
             # Add the product to the cart
             cart[message['result']['message_id']] = [subcategory, 0]
             self.bot.edit_message_text(chat_id=self.chat.id,
                                             message_id=message['result']['message_id'],
-                                            text=subcategory.text(w=self,text=items_count),
+                                            text=subcategory.text(w=self),
                                             reply_markup=select)            
             
         # Wait for user input
@@ -598,6 +599,7 @@ class Worker(threading.Thread):
                 continue
             # Send the message without the keyboard to get the message id
             message = product.send_as_message(w=self, chat_id=self.chat.id)
+        
             # Add the product to the cart
             cart[message['result']['message_id']] = [product, 0]
             # Create the inline keyboard to add the product to the cart
@@ -616,19 +618,31 @@ class Worker(threading.Thread):
                                               caption=product.text(w=self),
                                               reply_markup=inline_keyboard)
             # # Show variants if there is any
-            # product_variations = self.session.query(db.ProductVariation).filter_by(product_id=product.id).all()
-            # for variation in product_variations:
-            #     message2 = variation.send_as_message(w=self, chat_id=self.chat.id)
-            #     # Add the product to the cart
-            #     cart[message2['result']['message_id']] = [variation, 0]                
-            #     # Create the inline keyboard to add the product to the cart
-            #     inline_keyboard = telegram.InlineKeyboardMarkup(
-            #         [[telegram.InlineKeyboardButton(self.loc.get("menu_add_to_cart"), callback_data="cart_add")]]
-            #     )                
-            #     self.bot.edit_message_caption(chat_id=self.chat.id,
-            #                                   message_id=message2['result']['message_id'],
-            #                                   caption=variation.text(w=self),
-            #                                   reply_markup=inline_keyboard)                                 
+            product_variations = self.session.query(db.ProductVariation).filter_by(product_id=product.id).all()
+            for variation in product_variations:
+                message = variation.send_as_message(w=self, chat_id=self.chat.id)
+                
+                main_product = variation.product
+                new_name = f"{main_product.name} - {variation.variation.name}"
+                new_price = main_product.price + variation.variation.price_diff
+                print(main_product.price, variation.variation.price_diff, new_price)
+                # Create a variation of the product with the new price
+                product_variation = db.Product(name=new_name,
+                                    description=main_product.description,
+                                    price=new_price,
+                                    category=main_product.category,
+                                    sub_category=main_product.sub_category,
+                                    deleted=True)                
+                # Add the product to the cart
+                cart[message['result']['message_id']] = [product_variation, 0]                
+                # Create the inline keyboard to add the product to the cart
+                inline_keyboard = telegram.InlineKeyboardMarkup(
+                    [[telegram.InlineKeyboardButton(self.loc.get("menu_add_to_cart"), callback_data="cart_add")]]
+                )                
+                self.bot.edit_message_text(chat_id=self.chat.id,
+                                              message_id=message['result']['message_id'],
+                                              text=variation.text(w=self),
+                                              reply_markup=inline_keyboard)
         # Create the keyboard with the cancel button
         inline_keyboard = telegram.InlineKeyboardMarkup([[telegram.InlineKeyboardButton(self.loc.get("menu_cancel"),callback_data="cart_cancel")]])
         # Send a message containing the button to cancel or pay
@@ -648,8 +662,9 @@ class Worker(threading.Thread):
                 # Get the selected product, ensuring it exists
                 p = cart.get(callback.message.message_id)
                 if p is None:
-                    continue
+                    continue  
                 product = p[0]
+
                 # Add 1 copy to the cart
                 cart[callback.message.message_id][1] += 1
                 # Create the product inline keyboard
@@ -789,7 +804,8 @@ class Worker(threading.Thread):
     def __get_cart_summary(self, cart):
         # Create the cart summary
         product_list = ""
-        for product_id in cart:
+        print(cart)
+        for product_id in cart:            
             if cart[product_id][1] > 0:
                 product_list += cart[product_id][0].text(w=self,
                                                          style="short",
@@ -854,10 +870,10 @@ class Worker(threading.Thread):
         keyboard = list()
         # Add the supported payment methods to the keyboard
         # Cash
-        keyboard.append([telegram.KeyboardButton(self.loc.get("menu_cash"))])
+        # keyboard.append([telegram.KeyboardButton(self.loc.get("menu_cash"))])
         # Telegram Payments
-        if self.cfg["Payments"]["CreditCard"]["credit_card_token"] != "":
-            keyboard.append([telegram.KeyboardButton(self.loc.get("menu_credit_card"))])
+        # if self.cfg["Payments"]["CreditCard"]["credit_card_token"] != "":
+        #     keyboard.append([telegram.KeyboardButton(self.loc.get("menu_credit_card"))])
         # Bitcoin Payments
         if self.cfg["Bitcoin"]["api_key"] != "":
             keyboard.append([telegram.KeyboardButton("🛡 Bitcoin")])
@@ -1186,9 +1202,11 @@ class Worker(threading.Thread):
         log.debug("Displaying __product_variation_menu")   
         # Get the products list from the db
         variations = self.session.query(db.ProductVariation, db.Product.name, db.Variation.name)\
+                        .select_from(db.ProductVariation)\
                         .join(db.Product)\
                         .join(db.Variation)\
                         .all()
+
         # # Create a list of product names
         variation_names = [f"[{variation[0].id}] {variation[1]} ({variation[2]})" for variation in variations]
         # Insert at the start of the list the add product option, the remove product option and the Cancel option
@@ -1266,7 +1284,11 @@ class Worker(threading.Thread):
         cancel = telegram.InlineKeyboardMarkup([[telegram.InlineKeyboardButton(self.loc.get("menu_skip"),
                                                                                callback_data="cmd_cancel")]])
         select = telegram.InlineKeyboardMarkup([[telegram.InlineKeyboardButton(self.loc.get("menu_select"),
-                                                                                callback_data="cmd_select")]])        
+                                                                                callback_data="cmd_select")]])
+        choose = telegram.InlineKeyboardMarkup([[telegram.InlineKeyboardButton(self.loc.get("menu_edit"),
+                                                                                        callback_data="cmd_edit")],
+                                                        [telegram.InlineKeyboardButton(self.loc.get("menu_skip"),
+                                                                                        callback_data="cmd_skip")]])                
         # Ask for the product name until a valid product name is specified
         while True:
             # Ask the question to the user
@@ -1293,73 +1315,93 @@ class Worker(threading.Thread):
                                   reply_markup=cancel)
         # Wait for an answer
         description = self.__wait_for_regex(r"(.*)", cancellable=bool(product))
-        # Ask for product category
-        self.bot.send_message(self.chat.id, self.loc.get("ask_product_category"))
-        category = None
-        if product:
-            # Store old category if exist
-            category = product.category
-            print(category)
-            self.bot.send_message(self.chat.id,
-                                  self.loc.get("edit_current_value", value=escape(category.name)),
-                                  reply_markup=cancel)
-        # Print all categories 
-        # Get All Available Categories
-        categories = self.session.query(db.Category).all()
-        # The key is the message id of the product list
-        categories_messages: Dict[List[str, int]] = {}
-        # Loop over categories
-        for categorie in categories:
-            # Send the message without the keyboard to get the message id
-            message = categorie.send_as_message(w=self, chat_id=self.chat.id)
-            # Add the product to the cart
-            categories_messages[message['result']['message_id']] = [categorie, 0]
-            # Edit Message Text and add line buttons
-            self.bot.edit_message_text(chat_id=self.chat.id,
-                                    message_id=message['result']['message_id'],
-                                    text=categorie.text(w=self),
-                                    reply_markup=select)
+        
+        while True:
+            category = None
+            if product:
+                # Store old category if exist
+                category = product.category
+                self.bot.send_message(self.chat.id,
+                                    self.loc.get("edit_current_value", value=escape(category.name)),
+                                    reply_markup=choose)
+                # Get Selection Value
+                selection = self.__wait_for_inlinekeyboard_callback()
+                # If selection is decline then break out
+                if selection.data == "cmd_skip":
+                    break                
+                
+            # Ask for product category
+            self.bot.send_message(self.chat.id, self.loc.get("ask_product_category"))    
+            # Print all categories 
+            # Get All Available Categories
+            categories = self.session.query(db.Category).all()
+            # The key is the message id of the product list
+            categories_messages: Dict[List[str, int]] = {}
+            # Loop over categories
+            for categorie in categories:
+                # Send the message without the keyboard to get the message id
+                message = categorie.send_as_message(w=self, chat_id=self.chat.id)
+                # Add the product to the cart
+                categories_messages[message['result']['message_id']] = [categorie, 0]
+                # Edit Message Text and add line buttons
+                self.bot.edit_message_text(chat_id=self.chat.id,
+                                        message_id=message['result']['message_id'],
+                                        text=categorie.text(w=self),
+                                        reply_markup=select)
 
-        # Wait for user input
-        selection = self.__wait_for_inlinekeyboard_callback()
-        if selection.data == "cmd_select":
-            # Get the selected parent category, ensuring it exists
-            p = categories_messages.get(selection.message.message_id)
-            category = p[0]
+            # Wait for user input
+            selection = self.__wait_for_inlinekeyboard_callback()
+            if selection.data == "cmd_select":
+                # Get the selected parent category, ensuring it exists
+                p = categories_messages.get(selection.message.message_id)
+                if p is None:
+                    continue
+                category = p[0]                
+                break      
+        
+        while True:        
+            subcategory = None
+            if product:
+                # Store old category if exist
+                subcategory = product.sub_category
 
-        # Ask for product category
-        self.bot.send_message(self.chat.id, self.loc.get("ask_product_sub_category"))
-        subcategory = None
-        if product:
-            # Store old category if exist
-            subcategory = product.sub_category
+                self.bot.send_message(self.chat.id,
+                                    self.loc.get("edit_current_value", value=escape(subcategory.name)),
+                                    reply_markup=choose)
+                # Get Selection Value
+                selection = self.__wait_for_inlinekeyboard_callback()
+                # If selection is decline then break out
+                if selection.data == "cmd_skip":
+                    break                   
+                
+            # Ask for product category
+            self.bot.send_message(self.chat.id, self.loc.get("ask_product_sub_category"))                
+            # Print all categories 
+            # Get All Available Categories        
+            subcategories = self.session.query(db.SubCategory).filter_by(category=category).all()
+            # The key is the message id of the product list
+            subcategories_messages: Dict[List[str, int]] = {}
+            # Loop over categories
+            for subcategorie in subcategories:
+                # Send the message without the keyboard to get the message id
+                message = subcategorie.send_as_message(w=self, chat_id=self.chat.id)
+                # Add the product to the cart
+                subcategories_messages[message['result']['message_id']] = [subcategorie, 0]
+                # Edit Message Text and add line buttons
+                self.bot.edit_message_text(chat_id=self.chat.id,
+                                        message_id=message['result']['message_id'],
+                                        text=subcategorie.text(w=self),
+                                        reply_markup=select)
 
-            self.bot.send_message(self.chat.id,
-                                  self.loc.get("edit_current_value", value=escape(subcategory.name)),
-                                  reply_markup=cancel)
-        # Print all categories 
-        # Get All Available Categories        
-        subcategories = self.session.query(db.SubCategory).filter_by(category=category).all()
-        # The key is the message id of the product list
-        subcategories_messages: Dict[List[str, int]] = {}
-        # Loop over categories
-        for subcategorie in subcategories:
-            # Send the message without the keyboard to get the message id
-            message = subcategorie.send_as_message(w=self, chat_id=self.chat.id)
-            # Add the product to the cart
-            subcategories_messages[message['result']['message_id']] = [subcategorie, 0]
-            # Edit Message Text and add line buttons
-            self.bot.edit_message_text(chat_id=self.chat.id,
-                                    message_id=message['result']['message_id'],
-                                    text=subcategorie.text(w=self),
-                                    reply_markup=select)
-
-        # Wait for user input
-        selection = self.__wait_for_inlinekeyboard_callback()
-        if selection.data == "cmd_select":
-            # Get the selected parent category, ensuring it exists
-            supcat = subcategories_messages.get(selection.message.message_id)
-            subcategory = supcat[0]
+            # Wait for user input
+            selection = self.__wait_for_inlinekeyboard_callback()
+            if selection.data == "cmd_select":
+                # Get the selected parent category, ensuring it exists
+                supcat = subcategories_messages.get(selection.message.message_id)
+                if p is None:
+                    continue
+                subcategory = supcat[0]
+                break                    
 
         # Ask for the product price
         self.bot.send_message(self.chat.id,
@@ -1380,9 +1422,9 @@ class Worker(threading.Thread):
         elif price.lower() == "x":
             price = None
         else:
-            price = self.Price(price)
+            price = price
         if not isinstance(price, CancelSignal) and price is not None:
-            price = int(price)
+            price = float(price)
         # Ask for the product image
         self.bot.send_message(self.chat.id, self.loc.get("ask_product_image"), reply_markup=cancel)
         # Wait for an answer

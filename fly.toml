@@ -1,0 +1,7 @@
+# fly.toml file generated for essenecemarket on 2023-04-16T19:53:39+02:00
+
+app = "essenecemarket"
+primary_region = "lhr"
+
+[build]
+    builder = "heroku/buildpacks:latest"

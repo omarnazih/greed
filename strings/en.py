@@ -21,6 +21,11 @@ product_format_string = "<b>{name}</b>\n" \
                         "{price}\n" \
                         "<b>{cart}</b>"
 
+# Variation information
+variation_format_string = "<b>{name}</b> - {description}\n" \
+                          "{price}"\
+                          "<b>{cart}</b>"
+
 # Order Menue
 order_choose_category = "Select a <b>category📂</b>\n\n"\
                         "Press the select key to choose one. \n"\
@@ -28,8 +33,7 @@ order_choose_category = "Select a <b>category📂</b>\n\n"\
 
 # Order Menue
 order_choose_subcategory = "Select a <b>subcategory📂</b> \n\n"\
-                            "Press the select key to choose one. \n"\
-                            "The number inside () indicates products count under that subcategory."
+                            "Press the select key to choose one. \n"
 
 # Order number, displayed in the order info
 order_number = "Order #{id}"
