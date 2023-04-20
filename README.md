@@ -1,6 +1,7 @@
 # greed
 
 A customizable Telegram shop bot that accepts bitcoin payments.
+Now With Categories, subcategories and variations.
 
 ![](https://img.shields.io/badge/version-beta-blue.svg)
 
