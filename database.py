@@ -22,7 +22,7 @@ class User(TableDeclarativeBase):
     """A Telegram user who used the bot at least once."""
 
     # Telegram data
-    user_id = Column(BigInteger, primary_key=True)
+    user_id = Column(BigInteger, primary_key=True, autoincrement=True)
     first_name = Column(String, nullable=False)
     last_name = Column(String)
     username = Column(String)
@@ -91,7 +91,7 @@ class Product(TableDeclarativeBase):
     __tablename__ = "products"
     
     # Product id
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     # Product name
     name = Column(String)
     # Product description
@@ -138,7 +138,12 @@ class Product(TableDeclarativeBase):
 
     def send_as_message(self, w: "worker.Worker", chat_id: int, with_image: bool= True) -> dict:
         """Send a message containing the product data."""
-        if self.image is None or with_image is False:
+        if with_image is False:
+            r = requests.get(f"https://api.telegram.org/bot{w.cfg['Telegram']['token']}/sendMessage",
+                             params={"chat_id": chat_id,
+                                     "text": self.text(w,style="product_variation"),
+                                     "parse_mode": "HTML"})            
+        elif self.image is None:
             r = requests.get(f"https://api.telegram.org/bot{w.cfg['Telegram']['token']}/sendMessage",
                              params={"chat_id": chat_id,
                                      "text": self.text(w),
@@ -164,7 +169,7 @@ class Category(TableDeclarativeBase):
     """A purchasable product."""
 
     # Product id
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     # Product name
     name = Column(String)
 
@@ -195,7 +200,7 @@ class SubCategory(TableDeclarativeBase):
     """A purchasable product."""
 
     # Product id
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     
     # Product name
     name = Column(String)
@@ -229,7 +234,7 @@ class SubCategory(TableDeclarativeBase):
   
 class Variation(TableDeclarativeBase):
     __tablename__ = 'variation'
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String)
     quantity = Column(Integer)
     price_diff = Column(Float)
@@ -239,7 +244,7 @@ class Variation(TableDeclarativeBase):
         return f"<Variation {self.name}>"
 
     def text(self, w):
-        return f"<code>{self.name}</code>"
+        return f"<code>{self.name}-{self.price_diff}</code>"
 
     def send_as_message(self, w: "worker.Worker", chat_id: int) -> dict:
         """Send a message containing the variation data."""
@@ -252,7 +257,7 @@ class Variation(TableDeclarativeBase):
 
 class ProductVariation(TableDeclarativeBase):
     __tablename__ = 'product_variation'
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     product_id = Column(Integer, ForeignKey('products.id'), primary_key=True)
     variation_id = Column(Integer, ForeignKey('variation.id'), primary_key=True)
     product = relationship('Product', backref=backref("product_variation", cascade="all, delete-orphan"))    
@@ -287,7 +292,7 @@ class Transaction(TableDeclarativeBase):
     # TODO: split this into multiple tables
 
     # The internal transaction ID
-    transaction_id = Column(Integer, primary_key=True)
+    transaction_id = Column(Integer, primary_key=True, autoincrement=True)
     # The user whose credit is affected by this transaction
     user_id = Column(BigInteger, ForeignKey("users.user_id"), nullable=False)
     user = relationship("User", backref=backref("transactions"))
@@ -342,7 +347,7 @@ class BtcTransaction(TableDeclarativeBase):
     # TODO: split this into multiple tables
 
     # The internal transaction ID
-    transaction_id = Column(Integer, primary_key=True)
+    transaction_id = Column(Integer, primary_key=True, autoincrement=True)
     # The user whose credit is affected by this transaction
     user_id = Column(BigInteger, ForeignKey("users.user_id"), nullable=False)
     user = relationship("User")
@@ -395,7 +400,7 @@ class Order(TableDeclarativeBase):
     It may include multiple products, available in the OrderItem table."""
 
     # The unique order id
-    order_id = Column(Integer, primary_key=True)
+    order_id = Column(Integer, primary_key=True, autoincrement=True)
     # The user who placed the order
     user_id = Column(BigInteger, ForeignKey("users.user_id"))
     user = relationship("User")
@@ -457,7 +462,7 @@ class OrderItem(TableDeclarativeBase):
     """A product that has been purchased as part of an order."""
 
     # The unique item id
-    item_id = Column(Integer, primary_key=True)
+    item_id = Column(Integer, primary_key=True, autoincrement=True)
     # The product that is being ordered
     product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
     product = relationship("Product")

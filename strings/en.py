@@ -538,7 +538,11 @@ error_invoice_expired = "⚠️ This invoice has expired and was canceled. If yo
 error_duplicate_name = "️⚠️ A product with the same name already exists."
 
 # Error: a product with that name already exists
-error_duplicate_variation_name = "️⚠️ A variation with the same name already exists."
+error_duplicate_variation_name = "️⚠️ A variation with the same name and price already exists."
+
+# Error: a product with that name already exists
+error_caption_too_long = "️⚠️ Caption is to long, Please write max 900 characters string.\n\n"\
+                         "current characters count is <b>{value}</b>"
 
 # Error: a category with that name already exists
 error_duplicate_cat_name = "️⚠️ A category with the same name already exists."

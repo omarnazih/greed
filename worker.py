@@ -1,4 +1,5 @@
 import os
+import json
 import sys
 import datetime
 import logging
@@ -14,11 +15,12 @@ import requests
 from blockonomics import Blockonomics
 import sqlalchemy
 import telegram
+from dao import get_products
 
 import database as db
 import localization
 import nuconfig
-from utils import get_value_inside_brackets
+from utils import check_telegram_caption_length, get_value_inside_brackets, get_values_around_dash
 
 log = logging.getLogger(__name__)
 
@@ -78,7 +80,6 @@ class Worker(threading.Thread):
 
             def __init__(self, value: Union[int, float, str, "Price"]):
                 if isinstance(value, int):
-                    print(value)
                     # Keep the value as it is
                     self.value = int(value)
                 elif isinstance(value, float):
@@ -581,13 +582,9 @@ class Worker(threading.Thread):
     def __order_menu(self, category = None, sub_category = None):
         """User menu to order products from the shop."""
         log.debug("Displaying __order_menu")
+        
         # Get the products list from the db
-        if category:
-            products = self.session.query(db.Product).filter_by(category=category, deleted=False).all()
-        elif sub_category:
-            products = self.session.query(db.Product).filter_by(sub_category=sub_category, deleted=False).all()
-        else:
-            products = self.session.query(db.Product).filter_by(deleted=False).all()            
+        products = get_products(self.session, category, sub_category)
 
         # Create a dict to be used as 'cart'
         # The key is the message id of the product list
@@ -597,26 +594,24 @@ class Worker(threading.Thread):
             # If the product is not for sale, don't display it
             if product.price is None:
                 continue
+            if not check_telegram_caption_length(product.description):
+                continue            
             # Send the message without the keyboard to get the message id
             message = product.send_as_message(w=self, chat_id=self.chat.id)
-        
-            # Add the product to the cart
             cart[message['result']['message_id']] = [product, 0]
-            # Create the inline keyboard to add the product to the cart
             inline_keyboard = telegram.InlineKeyboardMarkup(
                 [[telegram.InlineKeyboardButton(self.loc.get("menu_add_to_cart"), callback_data="cart_add")]]
             )
-            # Edit the sent message and add the inline keyboard
             if product.image is None:
                 self.bot.edit_message_text(chat_id=self.chat.id,
-                                           message_id=message['result']['message_id'],
-                                           text=product.text(w=self),
-                                           reply_markup=inline_keyboard)
+                                        message_id=message['result']['message_id'],
+                                        text=product.text(w=self),
+                                        reply_markup=inline_keyboard)
             else:
                 self.bot.edit_message_caption(chat_id=self.chat.id,
-                                              message_id=message['result']['message_id'],
-                                              caption=product.text(w=self),
-                                              reply_markup=inline_keyboard)
+                                            message_id=message['result']['message_id'],
+                                            caption=product.text(w=self),
+                                            reply_markup=inline_keyboard)
             # # Show variants if there is any
             product_variations = self.session.query(db.ProductVariation).filter_by(product_id=product.id).all()
             for variation in product_variations:
@@ -625,14 +620,14 @@ class Worker(threading.Thread):
                 main_product = variation.product
                 new_name = f"{main_product.name} - {variation.variation.name}"
                 new_price = main_product.price + variation.variation.price_diff
-                print(main_product.price, variation.variation.price_diff, new_price)
+
                 # Create a variation of the product with the new price
                 product_variation = db.Product(name=new_name,
                                     description=main_product.description,
                                     price=new_price,
                                     category=main_product.category,
                                     sub_category=main_product.sub_category,
-                                    deleted=True)                
+                                    deleted=True)
                 # Add the product to the cart
                 cart[message['result']['message_id']] = [product_variation, 0]                
                 # Create the inline keyboard to add the product to the cart
@@ -804,7 +799,6 @@ class Worker(threading.Thread):
     def __get_cart_summary(self, cart):
         # Create the cart summary
         product_list = ""
-        print(cart)
         for product_id in cart:            
             if cart[product_id][1] > 0:
                 product_list += cart[product_id][0].text(w=self,
@@ -1232,7 +1226,7 @@ class Worker(threading.Thread):
         # If the user has selected the Remove Product option...
         elif selection == self.loc.get("menu_delete_variance"):
             # Open the delete product menu
-            self.__delete_variation_menu()
+            self.__delete_product_variation_menu()
         else:
             # Find the selected product
             product_variation = self.session.query(db.ProductVariation).filter_by(id=get_value_inside_brackets(selection)).one()
@@ -1245,7 +1239,7 @@ class Worker(threading.Thread):
         # Get the products list from the db
         variations = self.session.query(db.Variation).all()
         # Create a list of product names
-        variation_names = [variation.name for variation in variations]
+        variation_names = [f"{variation.name}-{variation.price_diff}" for variation in variations]
         # Insert at the start of the list the add product option, the remove product option and the Cancel option
         variation_names.insert(0, self.loc.get("menu_cancel"))
         variation_names.insert(1, self.loc.get("menu_add_variance"))
@@ -1271,8 +1265,9 @@ class Worker(threading.Thread):
             # Open the delete product menu
             self.__delete_variation_menu()
         else:
+            res = get_values_around_dash(selection)
             # Find the selected product
-            variation = self.session.query(db.Variation).filter_by(name=selection).one()
+            variation = self.session.query(db.Variation).filter_by(name=res[0], price_diff=res[1]).one()
             # Open the edit menu for that specific product
             self.__edit_variation(variation=variation)
 
@@ -1306,15 +1301,23 @@ class Worker(threading.Thread):
                 break
             self.bot.send_message(self.chat.id, self.loc.get("error_duplicate_name"))
 
-        # Ask the question to the user
-        self.bot.send_message(self.chat.id, self.loc.get("ask_product_description"))                    
-        # Display the current description if you're editing an existing product
-        if product:
-            self.bot.send_message(self.chat.id,
-                                  self.loc.get("edit_current_value", value=escape(product.description)),
-                                  reply_markup=cancel)
-        # Wait for an answer
-        description = self.__wait_for_regex(r"(.*)", cancellable=bool(product))
+        while True:
+            # Ask the question to the user
+            self.bot.send_message(self.chat.id, self.loc.get("ask_product_description"))                    
+            # Display the current description if you're editing an existing product
+            if product:
+                self.bot.send_message(self.chat.id,
+                                    self.loc.get("edit_current_value", value=escape(product.description)),
+                                    reply_markup=cancel)
+            # Wait for an answer
+            description = self.__wait_for_regex(r"(.*)", cancellable=bool(product))
+            if isinstance(description, CancelSignal):
+                break
+
+            if check_telegram_caption_length(description):                
+                break
+            else :
+                self.bot.send_message(self.chat.id, self.loc.get("error_caption_too_long", value=escape(str(len(description))))),
         
         while True:
             category = None
@@ -1480,7 +1483,7 @@ class Worker(threading.Thread):
             select = telegram.InlineKeyboardMarkup([[telegram.InlineKeyboardButton(self.loc.get("menu_select"),
                                                                                     callback_data="cmd_select")]])            
             # Get All Available Categories
-            products_list = self.session.query(db.Product).all()
+            products_list = self.session.query(db.Product).filter_by(deleted=False).all()
             # The key is the message id of the product list
             products_message_list: Dict[List[str, int]] = {}
             
@@ -1535,7 +1538,7 @@ class Worker(threading.Thread):
                     # Store Old Parentcategory into variable                
                     variation=product_variation.variation
                     # Give user choise either to edit or contimue
-                    self.bot.send_message(self.chat.id, f"Current variation Is \n <code>{variation.name}</code> \n\n would you like to edit it?",reply_markup=choose)                
+                    self.bot.send_message(self.chat.id, f"Current variation Is \n <code>{variation.name} - {self.Price(variation.price_diff)}</code> \n\n would you like to edit it?",reply_markup=choose)                
                     # Get Selection Value
                     selection = self.__wait_for_inlinekeyboard_callback()
                     # If selection is decline then break out
@@ -1589,22 +1592,29 @@ class Worker(threading.Thread):
             cancel = telegram.InlineKeyboardMarkup([[telegram.InlineKeyboardButton(self.loc.get("menu_skip"),
                                                                                 callback_data="cmd_cancel")]])
             # Ask for the variation name
-            while True:
-                self.bot.send_message(self.chat.id, self.loc.get("ask_variation_name"))
-                if variation:
-                    self.bot.send_message(self.chat.id, self.loc.get("edit_current_value", value=escape(variation.name)),
-                                        reply_markup=cancel)
-                name = self.__wait_for_regex(r"(.*)", cancellable=bool(variation))
-                if (variation and isinstance(name, CancelSignal)) or \
-                        self.session.query(db.Variation).filter_by(name=name).one_or_none() in [None, variation]:
-                    break
-                self.bot.send_message(self.chat.id, self.loc.get("error_duplicate_variation_name"))
+            # while True:
+            self.bot.send_message(self.chat.id, self.loc.get("ask_variation_name"))
+            if variation:
+                self.bot.send_message(self.chat.id, self.loc.get("edit_current_value", value=escape(variation.name)),
+                                    reply_markup=cancel)
+            name = self.__wait_for_regex(r"(.*)", cancellable=bool(variation))
+
+                # if (variation and isinstance(name, CancelSignal)) or \
+                #         self.session.query(db.Variation).filter_by(name=name).one_or_none() in [None, variation]:
+                #     break
+                # self.bot.send_message(self.chat.id, self.loc.get("error_duplicate_variation_name"))
 
             # Ask for the variation price
-            self.bot.send_message(self.chat.id, self.loc.get("ask_variation_price"))
-            if variation:
-                self.bot.send_message(self.chat.id, self.loc.get("edit_current_value", value=escape(str(variation.price_diff))),reply_markup=cancel)
-            price = self.__wait_for_regex(r"([-+]?\d*\.?\d+)", cancellable=bool(variation))
+            while True:
+                self.bot.send_message(self.chat.id, self.loc.get("ask_variation_price"))
+                if variation:
+                    self.bot.send_message(self.chat.id, self.loc.get("edit_current_value", value=escape(str(variation.price_diff))),reply_markup=cancel)
+                    price = variation.price_diff
+                price = self.__wait_for_regex(r"([-+]?\d*\.?\d+)", cancellable=bool(variation))
+                if (variation and isinstance(name, CancelSignal)) or \
+                        self.session.query(db.Variation).filter_by(name=name,price_diff=price).one_or_none() in [None, variation]:
+                    break
+                self.bot.send_message(self.chat.id, self.loc.get("error_duplicate_variation_name"))                
 
             # Ask for the variation quantity
             self.bot.send_message(self.chat.id, self.loc.get("ask_variation_quantity"))
@@ -1627,12 +1637,12 @@ class Worker(threading.Thread):
     def __delete_product_variation_menu(self):
         log.debug("Displaying __delete_product_variation_menu")
         # Get the products list from the db
-        variations = self.session.query(db.ProductVariation, db.Product.name, db.Variation.name)\
+        variations = self.session.query(db.ProductVariation, db.Product.name, db.Variation.name, db.Variation.price_diff)\
                         .join(db.Product)\
                         .join(db.Variation)\
                         .all()
         # Create a list of product names
-        variation_names = [f"[{variation[0].id}] {variation[1]}/{variation[2]}" for variation in variations]
+        variation_names = [f"[{variation[0].id}] {variation[1]}/{variation[2]} - {self.Price(variation[3])}" for variation in variations]
         # Insert at the start of the list the Cancel button
         variation_names.insert(0, self.loc.get("menu_cancel"))
         # Create a keyboard using the product names
@@ -1657,11 +1667,11 @@ class Worker(threading.Thread):
             
 
     def __delete_variation_menu(self):
-        log.debug("Displaying __delete_product_variation_menu")
+        log.debug("Displaying __delete_variation_menu")
         # Get the products list from the db
         variations = self.session.query(db.Variation).all()
         # Create a list of product names
-        variation_names = [variation.name for variation in variations]
+        variation_names = [f"{variation.name}-{variation.price_diff}" for variation in variations]
         # Insert at the start of the list the Cancel button
         variation_names.insert(0, self.loc.get("menu_cancel"))
         # Create a keyboard using the product names
@@ -1675,8 +1685,9 @@ class Worker(threading.Thread):
             # Exit the menu
             return
         else:
+            res = get_values_around_dash(selection)
             # Find the selected product
-            variation = self.session.query(db.Variation).filter_by(name=selection).one()
+            variation = self.session.query(db.Variation).filter_by(name=res[0], price_diff=res[1]).one()
             # Delete variation
             self.session.delete(variation)
             self.session.commit()

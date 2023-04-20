@@ -18,7 +18,6 @@ class Blockonomics:
     def fetch_new_btc_price():
         url = 'https://www.blockonomics.co/api/price'
         params = {'currency':configloader.user_cfg["Payments"]["currency"]}
-        print("params ==== ",params)
         r = requests.get(url,params)
         if r.status_code == 200:
           price = r.json()['price']
@@ -64,7 +63,6 @@ class BlockonomicsPoll:
         if not pending_addresses: return
 
         response = self._get_history_for_addresses(addresses=pending_addresses)
-        print("response ==== ",response)
         # Update Pending Transactions
         for transaction in response.get('pending', []):
             self.handle_update(
@@ -89,7 +87,6 @@ class BlockonomicsPoll:
 
         url = "https://www.blockonomics.co/api/searchhistory"
         body = { "addr": ", ".join(addresses) }
-        print("body=======", body)
         headers = { "Authorization": "Bearer %s" % api_key }
 
         r = requests.post(

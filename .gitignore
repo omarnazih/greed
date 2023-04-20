@@ -102,5 +102,8 @@ ENV/
 .idea/
 
 config/config.ini
+config/config.toml
+.out/
 *.sqlite
 *.sqlite-journal
+config/config.toml

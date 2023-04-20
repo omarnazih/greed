@@ -24,9 +24,8 @@ fallback_language = "en"
 [Database]
 # The database engine you want to use.
 # Refer to http://docs.sqlalchemy.org/en/latest/core/engines.html for the possible settings.
-engine = "sqlite:///database.sqlite"
-#engine = "postgresql+psycopg2://postgres:peq6ozsMwvF9F9X@essencemarket-db.flycast:5432"
-
+#engine = "sqlite:///database.sqlite"
+engine = "postgresql+psycopg2://eseencemarket:ck7aJt1pgPsq@ep-dark-haze-497404.eu-central-1.aws.neon.tech/neondb"
 
 
 # Telegram bot parameters
@@ -115,7 +114,7 @@ display_welcome_message = true
 format = "{asctime} | {threadName} | {name} | {message}"
 # Logging level: ignore all log entries with a level lower than the specified one
 # Valid options are FATAL, ERROR, WARNING, INFO, and DEBUG
-level = "DEBUG"
+level = "INFO"
 
 # Bitcoin payment settings
 [Bitcoin]
